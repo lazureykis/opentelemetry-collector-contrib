@@ -1,0 +1,27 @@
+display_name: Azure Key Vault Basic Auth Extension
+type: azurekeyvaultbasicauth
+
+description: |
+  Provides Basic Auth credentials for outbound HTTP and gRPC requests by fetching
+  a JSON secret from Azure Key Vault and rotating credentials in place at a
+  configurable interval without restarting the collector.
+
+status:
+  class: extension
+  stability:
+    development: [extension]
+  distributions:
+    - contrib
+  codeowners:
+    active: [lazureykis]
+
+tests:
+  skip_lifecycle: true
+  goleak:
+    ignore:
+      top:
+        - "net/http.(*persistConn).writeLoop"
+        - "internal/poll.runtime_pollWait"
+  config:
+    vault_url: "https://my-vault.vault.azure.net"
+    secret_name: "my-creds"

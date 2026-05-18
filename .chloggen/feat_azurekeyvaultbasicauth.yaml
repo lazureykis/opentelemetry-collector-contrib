@@ -1,0 +1,5 @@
+change_type: new_component
+component: extension/azurekeyvaultbasicauthextension
+note: Add Azure Key Vault Basic Auth extension for rotating client credentials without restarting the collector.
+issues: [48277]
+subtext: ""

@@ -21,6 +21,7 @@ extensions:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/azureauthextension v0.152.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/awssecretsmanagerbasicauthextension v0.152.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/gcpsecretsmanagerbasicauthextension v0.152.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/azurekeyvaultbasicauthextension v0.152.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension v0.152.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/bearertokenauthextension v0.152.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/datadogextension v0.152.0
