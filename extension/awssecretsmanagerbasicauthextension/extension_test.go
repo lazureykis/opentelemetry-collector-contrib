@@ -52,6 +52,17 @@ func TestExtension_PerRPCCredentials(t *testing.T) {
 	require.NotNil(t, creds)
 }
 
+func TestExtension_AuthMethodsBeforeStart(t *testing.T) {
+	ext := newExtension(&Config{SecretARN: "arn:aws:secretsmanager:us-east-1:123:secret:test"}, zaptest.NewLogger(t))
+	_, err := ext.RoundTripper(http.DefaultTransport)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not started")
+
+	_, err = ext.PerRPCCredentials()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not started")
+}
+
 func TestExtension_ShutdownBeforeStart(t *testing.T) {
 	ext := newExtension(&Config{SecretARN: "arn:aws:secretsmanager:us-east-1:123:secret:test"}, zaptest.NewLogger(t))
 	assert.NoError(t, ext.Shutdown(context.Background()))

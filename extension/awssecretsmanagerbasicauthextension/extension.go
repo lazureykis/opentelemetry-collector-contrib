@@ -5,6 +5,7 @@ package awssecretsmanagerbasicauthextension
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -64,9 +65,15 @@ func (e *awsSecretsManagerBasicAuth) Shutdown(_ context.Context) error {
 }
 
 func (e *awsSecretsManagerBasicAuth) RoundTripper(base http.RoundTripper) (http.RoundTripper, error) {
+	if e.poller == nil {
+		return nil, errors.New("extension not started")
+	}
 	return basicauth.NewRoundTripper(base, e.poller)
 }
 
 func (e *awsSecretsManagerBasicAuth) PerRPCCredentials() (grpccreds.PerRPCCredentials, error) {
+	if e.poller == nil {
+		return nil, errors.New("extension not started")
+	}
 	return basicauth.NewPerRPCCredentials(e.poller)
 }
