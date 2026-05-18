@@ -1,0 +1,25 @@
+display_name: AWS Secrets Manager Basic Auth Extension
+type: awssecretsmanagerbasicauth
+
+description: |
+  Provides Basic Auth credentials for outbound HTTP and gRPC requests by fetching
+  a JSON secret from AWS Secrets Manager and rotating credentials in place at a
+  configurable interval without restarting the collector.
+
+status:
+  class: extension
+  stability:
+    development: [extension]
+  distributions:
+    - contrib
+  codeowners:
+    active: [lazureykis]
+
+tests:
+  skip_lifecycle: true
+  goleak:
+    ignore:
+      top:
+        - "net/http.(*persistConn).writeLoop"
+        - "internal/poll.runtime_pollWait"
+  config:
