@@ -49,6 +49,12 @@ func NewCredentialPoller(resolver SecretResolver, refreshInterval time.Duration,
 // Start performs the initial secret fetch (failing fast on error) then launches
 // the background polling goroutine.
 func (p *CredentialPoller) Start(ctx context.Context) error {
+	if p.refreshInterval <= 0 {
+		return fmt.Errorf("refreshInterval must be positive, got %v", p.refreshInterval)
+	}
+	if p.shutdownCh != nil {
+		return fmt.Errorf("CredentialPoller already started")
+	}
 	username, password, err := p.resolver.Resolve(ctx)
 	if err != nil {
 		return fmt.Errorf("initial secret fetch failed: %w", err)

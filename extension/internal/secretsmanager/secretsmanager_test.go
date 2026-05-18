@@ -127,6 +127,22 @@ func TestCredentialPoller_AtomicPair(t *testing.T) {
 	}
 }
 
+func TestCredentialPoller_InvalidRefreshInterval(t *testing.T) {
+	p := newTestPoller(t, &staticResolver{"u", "p"}, 0)
+	err := p.Start(t.Context())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "refreshInterval must be positive")
+}
+
+func TestCredentialPoller_DoubleStart(t *testing.T) {
+	p := newTestPoller(t, &staticResolver{"u", "p"}, time.Hour)
+	require.NoError(t, p.Start(t.Context()))
+	defer p.Shutdown()
+	err := p.Start(t.Context())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already started")
+}
+
 func TestCredentialPoller_ShutdownIsIdempotent(t *testing.T) {
 	p := newTestPoller(t, &staticResolver{"u", "p"}, time.Hour)
 	require.NoError(t, p.Start(t.Context()))
