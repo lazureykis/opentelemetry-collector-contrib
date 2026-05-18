@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema
+title: GCP Secret Manager Basic Auth Extension
+description: Provides Basic Auth credentials sourced from GCP Secret Manager.
+type: object
+properties:
+  secret_name:
+    type: string
+    description: Full resource name of the GCP Secret Manager secret version (e.g. projects/my-project/secrets/my-creds/versions/latest).
+  refresh_interval:
+    type: string
+    description: How often to poll for credential rotation. Default 1h.
+  username_key:
+    type: string
+    description: JSON key for the username field. Default "username".
+  password_key:
+    type: string
+    description: JSON key for the password field. Default "password".
+required:
+  - secret_name
