@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema
+title: Azure Key Vault Basic Auth Extension
+description: Provides Basic Auth credentials sourced from Azure Key Vault.
+type: object
+properties:
+  vault_url:
+    type: string
+    description: URL of the Azure Key Vault, e.g. "https://my-vault.vault.azure.net".
+  secret_name:
+    type: string
+    description: Name of the secret in Key Vault.
+  secret_version:
+    type: string
+    description: Version of the secret. If empty, the latest version is used.
+  refresh_interval:
+    type: string
+    description: How often to poll for credential rotation. Default 1h.
+  username_key:
+    type: string
+    description: JSON key for the username field. Default "username".
+  password_key:
+    type: string
+    description: JSON key for the password field. Default "password".
+required:
+  - vault_url
+  - secret_name
