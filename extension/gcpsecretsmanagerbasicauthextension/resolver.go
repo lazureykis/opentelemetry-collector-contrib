@@ -28,6 +28,7 @@ func (a *realClientAdapter) AccessSecretVersion(ctx context.Context, req *secret
 
 type gcpSecretResolver struct {
 	client      gcpSMClient
+	rawClient   *secretmanager.Client // held for Close()
 	secretName  string
 	usernameKey string
 	passwordKey string
@@ -40,10 +41,15 @@ func newGCPSecretResolver(ctx context.Context, secretName, usernameKey, password
 	}
 	return &gcpSecretResolver{
 		client:      &realClientAdapter{c: client},
+		rawClient:   client,
 		secretName:  secretName,
 		usernameKey: usernameKey,
 		passwordKey: passwordKey,
 	}, nil
+}
+
+func (r *gcpSecretResolver) Close() error {
+	return r.rawClient.Close()
 }
 
 func (r *gcpSecretResolver) Resolve(ctx context.Context) (string, string, error) {

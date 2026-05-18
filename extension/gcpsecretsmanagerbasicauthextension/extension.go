@@ -25,9 +25,10 @@ var (
 )
 
 type gcpSecretsManagerBasicAuth struct {
-	cfg    *Config
-	poller *internalsm.CredentialPoller
-	logger *zap.Logger
+	cfg      *Config
+	poller   *internalsm.CredentialPoller
+	resolver *gcpSecretResolver // held for Close()
+	logger   *zap.Logger
 }
 
 func newExtension(cfg *Config, logger *zap.Logger) *gcpSecretsManagerBasicAuth {
@@ -39,6 +40,7 @@ func (e *gcpSecretsManagerBasicAuth) Start(ctx context.Context, _ component.Host
 	if err != nil {
 		return err
 	}
+	e.resolver = resolver
 	e.poller = internalsm.NewCredentialPoller(resolver, e.cfg.refreshInterval(), e.logger)
 	return e.poller.Start(ctx)
 }
@@ -46,6 +48,9 @@ func (e *gcpSecretsManagerBasicAuth) Start(ctx context.Context, _ component.Host
 func (e *gcpSecretsManagerBasicAuth) Shutdown(_ context.Context) error {
 	if e.poller != nil {
 		e.poller.Shutdown()
+	}
+	if e.resolver != nil {
+		return e.resolver.Close()
 	}
 	return nil
 }
