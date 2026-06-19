@@ -5,7 +5,6 @@ package lambda // import "github.com/open-telemetry/opentelemetry-collector-cont
 
 import (
 	"context"
-	"errors"
 	"os"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -43,12 +42,13 @@ func NewDetector(set processor.Settings, dcfg internal.DetectorConfig) (internal
 	return &detector{logger: set.Logger, rb: metadata.NewResourceBuilder(cfg.ResourceAttributes)}, nil
 }
 
-func (d *detector) Detect(_ context.Context, failOnMissingMetadata bool) (resource pcommon.Resource, schemaURL string, err error) {
+func (d *detector) Detect(_ context.Context, _ bool) (resource pcommon.Resource, schemaURL string, err error) {
 	functionName, ok := os.LookupEnv(awsLambdaFunctionNameEnvVar)
 	if !ok || functionName == "" {
-		if failOnMissingMetadata {
-			return pcommon.NewResource(), "", errors.New("lambda metadata unavailable: " + awsLambdaFunctionNameEnvVar + " env var not set")
-		}
+		// An absent function-name env var means we are not running on Lambda. That is a
+		// platform-applicability negative, not missing metadata, so it must not fail detection
+		// even when fail_on_missing_metadata is set (see #46659): otherwise the lambda detector
+		// breaks every config that lists it alongside the detector for the platform actually in use.
 		d.logger.Debug("Unable to identify AWS Lambda environment")
 		return pcommon.NewResource(), "", nil
 	}

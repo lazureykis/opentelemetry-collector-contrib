@@ -5,7 +5,6 @@ package eks // import "github.com/open-telemetry/opentelemetry-collector-contrib
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -102,13 +101,15 @@ func NewDetector(set processor.Settings, dcfg internal.DetectorConfig) (internal
 func (d *detector) Detect(ctx context.Context, failOnMissingMetadata bool) (resource pcommon.Resource, schemaURL string, err error) {
 	// Check if running on EKS.
 	if isEKS, err := d.isEKS(ctx); err != nil || !isEKS {
+		// A clean negative (!isEKS) means we are not running on EKS — a platform-applicability
+		// negative, not missing metadata — so it must not fail detection even when
+		// fail_on_missing_metadata is set (see #46659). Only an actual failure of the EKS check
+		// (err != nil), which may be a transient outage while on EKS, honors the flag.
 		if err != nil {
 			d.logger.Debug("Unable to identify EKS environment", zap.Error(err))
 			if failOnMissingMetadata {
 				return pcommon.NewResource(), "", fmt.Errorf("eks metadata unavailable: %w", err)
 			}
-		} else if failOnMissingMetadata {
-			return pcommon.NewResource(), "", errors.New("eks metadata unavailable: not running on EKS")
 		}
 		return pcommon.NewResource(), "", nil
 	}
