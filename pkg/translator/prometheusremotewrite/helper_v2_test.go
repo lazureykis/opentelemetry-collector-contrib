@@ -5,6 +5,7 @@ package prometheusremotewrite
 
 import (
 	"math"
+	"sort"
 	"testing"
 	"time"
 
@@ -535,6 +536,62 @@ func TestPrometheusConverterV2_AddHistogramDataPointsNormalizedLeLabels(t *testi
 	// e.g. a bound of 10 must be rendered as "10.0".
 	assert.ElementsMatch(t, []string{"0.5", "10.0", "250.0", "+Inf"}, leValues)
 	assert.Empty(t, converter.conflicts)
+}
+
+func leLabelsForBoundsV2(t *testing.T, bounds []float64) []string {
+	t.Helper()
+
+	metric := pmetric.NewMetric()
+	metric.SetName("test_hist")
+	metric.SetEmptyHistogram().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+
+	pt := metric.Histogram().DataPoints().AppendEmpty()
+	pt.SetTimestamp(pcommon.Timestamp(time.Now().UnixNano()))
+	pt.ExplicitBounds().FromRaw(bounds)
+	counts := make([]uint64, len(bounds)+1)
+	for i := range counts {
+		counts[i] = uint64(i + 1)
+	}
+	pt.BucketCounts().FromRaw(counts)
+
+	converter := newPrometheusConverterV2(Settings{})
+	unitNamer := otlptranslator.UnitNamer{}
+	m := metadata{
+		Type: otelMetricTypeToPromMetricTypeV2(metric),
+		Help: metric.Description(),
+		Unit: unitNamer.Build(metric.Unit()),
+	}
+	require.NoError(t, converter.addHistogramDataPoints(
+		metric.Histogram().DataPoints(),
+		pcommon.NewResource(),
+		pcommon.NewInstrumentationScope(),
+		Settings{},
+		metric.Name(),
+		m,
+	))
+
+	symbols := converter.symbolTable.Symbols()
+	var leValues []string
+	for _, series := range converter.unique {
+		for i := 0; i+1 < len(series.LabelsRefs); i += 2 {
+			if symbols[series.LabelsRefs[i]] == model.BucketLabel {
+				leValues = append(leValues, symbols[series.LabelsRefs[i+1]])
+			}
+		}
+	}
+	sort.Strings(leValues)
+	return leValues
+}
+
+func TestPrometheusConverterV2_LeLabelsWideRangeBounds(t *testing.T) {
+	bounds := []float64{0.00001, 500000, 1048576, 1073741824}
+	got := leLabelsForBoundsV2(t, bounds)
+	t.Logf("bounds %v produced le labels %q", bounds, got)
+
+	want := []string{"+Inf", "0.00001", "1048576.0", "1073741824.0", "500000.0"}
+	assert.Equal(t, want, got)
+}
+
 // v2SeriesByName resolves each RW2 time series' labels through the symbol table and
 // returns the one whose __name__ equals name, or nil.
 func v2SeriesByName(t *testing.T, c *prometheusConverterV2, name string) *writev2.TimeSeries {

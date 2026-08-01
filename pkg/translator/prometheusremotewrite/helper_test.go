@@ -6,6 +6,7 @@ package prometheusremotewrite
 import (
 	"math"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -1195,6 +1196,75 @@ func TestPrometheusConverter_AddHistogramDataPointsNormalizedLeLabels(t *testing
 	// e.g. a bound of 10 must be rendered as "10.0".
 	assert.ElementsMatch(t, []string{"0.5", "10.0", "250.0", "+Inf"}, leValues)
 	assert.Empty(t, converter.conflicts)
+}
+
+func leLabelsForBounds(t *testing.T, bounds []float64) []string {
+	t.Helper()
+
+	metric := pmetric.NewMetric()
+	metric.SetName("test_hist")
+	metric.SetEmptyHistogram().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+
+	pt := metric.Histogram().DataPoints().AppendEmpty()
+	pt.SetTimestamp(pcommon.Timestamp(time.Now().UnixNano()))
+	pt.ExplicitBounds().FromRaw(bounds)
+	counts := make([]uint64, len(bounds)+1)
+	for i := range counts {
+		counts[i] = uint64(i + 1)
+	}
+	pt.BucketCounts().FromRaw(counts)
+
+	converter := newPrometheusConverter(Settings{})
+	require.NoError(t, converter.addHistogramDataPoints(
+		metric.Histogram().DataPoints(),
+		pcommon.NewResource(),
+		pcommon.NewInstrumentationScope(),
+		Settings{},
+		metric.Name(),
+	))
+
+	var leValues []string
+	for _, series := range converter.unique {
+		for _, label := range series.Labels {
+			if label.Name == model.BucketLabel {
+				leValues = append(leValues, label.Value)
+			}
+		}
+	}
+	sort.Strings(leValues)
+	return leValues
+}
+
+func TestPrometheusConverter_LeLabelsWideRangeBounds(t *testing.T) {
+	bounds := []float64{0.00001, 500000, 1048576, 1073741824}
+	got := leLabelsForBounds(t, bounds)
+	t.Logf("bounds %v produced le labels %q", bounds, got)
+
+	want := []string{"+Inf", "0.00001", "1048576.0", "1073741824.0", "500000.0"}
+	assert.Equal(t, want, got)
+}
+
+// TestPrometheusConverter_LeLabelsPubsubPushBoundaries feeds the byte-size bucket boundaries
+// declared in receiver/googlecloudpubsubpushreceiver/metadata.yaml through the converter and
+// reports how many le label values switch to scientific notation.
+func TestPrometheusConverter_LeLabelsPubsubPushBoundaries(t *testing.T) {
+	bounds := []float64{
+		1024, 2560, 5120, 10240, 25600, 51200, 102400, 256000, 512000,
+		1048576, 2621440, 5242880, 10485760, 26214400, 52428800, 104857600,
+		262144000, 536870912, 1073741824, 1610612736, 2147483648,
+	}
+	got := leLabelsForBounds(t, bounds)
+
+	scientific := 0
+	for _, v := range got {
+		if strings.ContainsRune(v, 'e') {
+			scientific++
+		}
+	}
+	t.Logf("%d bounds -> %d le values in scientific notation: %q", len(bounds), scientific, got)
+	assert.Equal(t, 0, scientific)
+}
+
 // findSeriesTS returns the unique RW1 time series whose __name__ label equals name, or nil.
 func findSeriesTS(c *prometheusConverter, name string) *prompb.TimeSeries {
 	for _, ts := range c.unique {
