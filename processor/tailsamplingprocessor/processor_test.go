@@ -1957,6 +1957,7 @@ type extension struct {
 	cfg        map[string]any
 	storage    tailstorageextension.TailStorage
 	takeErr    error
+	deleteErr  error
 	appendCount,
 	takeCount,
 	deleteCount int
@@ -1998,6 +1999,9 @@ func (e *extension) Take(traceID pcommon.TraceID) (ptrace.Traces, error) {
 func (e *extension) Delete(traceID pcommon.TraceID) error {
 	e.ensureStorage()
 	e.deleteCount++
+	if e.deleteErr != nil {
+		return e.deleteErr
+	}
 	return e.storage.Delete(traceID)
 }
 
